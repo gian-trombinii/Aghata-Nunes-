@@ -1,151 +1,114 @@
-//variáveis da bolinha
-let xBolinha = 100;
-let yBolinha = 200;
-let diametro = 20;
-let raio = diametro / 2;
+/*
+ * @name Shake Ball Bounce
+ * @description Create a Ball class, instantiate multiple objects, move it around the screen, and bounce when touch the edge of the canvas.
+ * Detect shake event based on total change in accelerationX and accelerationY and speed up or slow down objects based on detection.
+ */
 
-//variáveis do oponente
-let xRaqueteOponente = 585;
-let yRaqueteOponente = 150;
+let balls = [];
 
-//velocidade da bolinha
-let velocidadeXBolinha = 6;
-let velocidadeYBolinha = 6;
-
-//variáveis da raquete
-let xRaquete = 5;
-let yRaquete = 150;
-let raqueteComprimento = 10;
-let raqueteAltura = 90;
-
-//placar do jogo
-let meusPontos = 0;
-let pontosDoOponente = 0;
-
-//sons do jogo 
-let raquetada;
-let ponto;
-let trilha;
-
-function preload(){
-  trilha = loadSound("trilha.mp3");
-  ponto = loadSound("ponto.mp3");
-  raquetada = loadSound("raquetada.mp3")
-}
-
-
-let colidiu = false;
+let threshold = 30;
+let accChangeX = 0;
+let accChangeY = 0;
+let accChangeT = 0;
 
 function setup() {
-  createCanvas(600, 400);
-  trilha.loop();
+  createCanvas(displayWidth, displayHeight);
+
+  for (let i = 0; i < 20; i++) {
+    balls.push(new Ball());
+  }
 }
 
 function draw() {
-    background(0);
-    mostraBolinha();
-    movimentaBolinha();
-    verificaColisaoBorda();
-    mostraRaquete(xRaquete, yRaquete);
-    movimentaMinhaRaquete();
-    verificaColisaoRaquete(xRaquete, yRaquete);
-    verificaColisaoRaquete(xRaqueteOponente, yRaqueteOponente);
-    mostraRaquete(xRaqueteOponente, yRaqueteOponente);
-    movimentaRaqueteOponente();
-    incluiPlacar() 
-    marcaPonto();
-}
-function mostraBolinha() {
-  circle(xBolinha, yBolinha, diametro);
-}
+  background(0);
 
-function movimentaBolinha() {
-  xBolinha += velocidadeXBolinha;
-  yBolinha += velocidadeYBolinha;
-}
-
-function verificaColisaoBorda() {
-  if (xBolinha + raio > width || xBolinha - raio < 0) {
-    velocidadeXBolinha *= -1;
+  for (let i = 0; i < balls.length; i++) {
+    balls[i].move();
+    balls[i].display();
   }
-  if (yBolinha + raio > height || yBolinha - raio < 0) {
-    velocidadeYBolinha *= -1;
-  }
+
+  checkForShake();
 }
 
-function mostraRaquete(x,y) {
-    rect(x, y, raqueteComprimento, raqueteAltura);
-}
-
-function movimentaMinhaRaquete() {
-  if(keyIsDown(UP_ARROW)) {
-    yRaquete -= 10;
+function checkForShake() {
+  // Calculate total change in accelerationX and accelerationY
+  accChangeX = abs(accelerationX - pAccelerationX);
+  accChangeY = abs(accelerationY - pAccelerationY);
+  accChangeT = accChangeX + accChangeY;
+  // If shake
+  if (accChangeT >= threshold) {
+    for (let i = 0; i < balls.length; i++) {
+      balls[i].shake();
+      balls[i].turn();
+    }
   }
-  if(keyIsDown(DOWN_ARROW)) {
-    yRaquete += 10;
+  // If not shake
+  else {
+    for (let i = 0; i < balls.length; i++) {
+      balls[i].stopShake();
+      balls[i].turn();
+      balls[i].move();
+    }
   }
 }
 
-function verificaColisaoRaquete() {
-  if (xBolinha - raio < xRaquete + raqueteComprimento && yBolinha - raio < yRaquete + raqueteAltura && yBolinha + raio > yRaquete) {
-    velocidadeXBolinha *= -1;
-    raquetada.play();
+// Ball class
+class Ball {
+  constructor() {
+    this.x = random(width);
+    this.y = random(height);
+    this.diameter = random(10, 30);
+    this.xspeed = random(-2, 2);
+    this.yspeed = random(-2, 2);
+    this.oxspeed = this.xspeed;
+    this.oyspeed = this.yspeed;
+    this.direction = 0.7;
   }
-}
 
-function verificaColisaoRaquete(x, y) {
-    colidiu = collideRectCircle(x, y, raqueteComprimento, raqueteAltura, xBolinha, yBolinha, raio);
-    if (colidiu){
-        velocidadeXBolinha *= -1;
-      raquetada.play();
+  move() {
+    this.x += this.xspeed * this.direction;
+    this.y += this.yspeed * this.direction;
   }
-}
 
-function movimentaRaqueteOponente() {
-     if(keyIsDown(87)) {
-    yRaqueteOponente -= 10;
+  // Bounce when touch the edge of the canvas
+  turn() {
+    if (this.x < 0) {
+      this.x = 0;
+      this.direction = -this.direction;
+    } else if (this.y < 0) {
+      this.y = 0;
+      this.direction = -this.direction;
+    } else if (this.x > width - 20) {
+      this.x = width - 20;
+      this.direction = -this.direction;
+    } else if (this.y > height - 20) {
+      this.y = height - 20;
+      this.direction = -this.direction;
+    }
   }
-  if(keyIsDown(83)) {
-    yRaqueteOponente += 10;
+
+  // Add to xspeed and yspeed based on
+  // the change in accelerationX value
+  shake() {
+    this.xspeed += random(5, accChangeX / 3);
+    this.yspeed += random(5, accChangeX / 3);
   }
-}
 
-
-function incluiPlacar(){
-  stroke(255)
-    textAlign(CENTER);
-    textSize(16);
-    fill(color(255,140, 0));
-    rect(150, 10, 40, 20);
-    fill(255);
-    text(meusPontos, 170, 26);
-    fill(color(255,140, 0));
-    rect(450, 10, 40, 20);
-    fill(255);
-    text(pontosDoOponente, 470, 26);
-
-
-
-}
-
-
-function marcaPonto() {
-  if (xBolinha > 590) {
-    meusPontos += 1;
-    ponto.play();
+  // Gradually slows down
+  stopShake() {
+    if (this.xspeed > this.oxspeed) {
+      this.xspeed -= 0.6;
+    } else {
+      this.xspeed = this.oxspeed;
+    }
+    if (this.yspeed > this.oyspeed) {
+      this.yspeed -= 0.6;
+    } else {
+      this.yspeed = this.oyspeed;
+    }
   }
-  if (xBolinha < 10) {
-    pontosDoOponente += 1;
-    ponto.play();
+
+  display() {
+    ellipse(this.x, this.y, this.diameter, this.diameter);
   }
-}
-
-//style.css//
-
-    html, body {
-  margin: 0;
-  padding: 0;
-}
-canvas {
-  display: block;
 }
